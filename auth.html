@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCall | Authentication</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 3rem;
+            max-width: 450px;
+            width: 100%;
+            animation: slideUp 0.5s ease;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-header i {
+            font-size: 3rem;
+            color: var(--neon-blue);
+            margin-bottom: 1rem;
+        }
+
+        .auth-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--neon-blue);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--neon-blue);
+            box-shadow: var(--neon-blue-glow);
+        }
+
+        .country-select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .auth-footer a {
+            color: var(--neon-blue);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--error-red);
+            color: var(--error-red);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success-green);
+            color: var(--success-green);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .guest-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s;
+        }
+
+        .guest-btn:hover {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
+
+        @media (max-width: 768px) {
+            .auth-card { padding: 2rem; margin: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2 id="formTitle">Sign Up</h2>
+                <p id="formSubtitle">Join CyberCall for free global calling</p>
+            </div>
+
+            <div id="messageContainer"></div>
+
+            <form id="authForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" placeholder="Choose a username" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="Create a password" required>
+                    </div>
+                </div>
+
+                <div class="form-group" id="confirmGroup" style="display: none;">
+                    <label>Confirm Password</label>
+                    <div class="input-group">
+                        <i class="fas fa-check"></i>
+                        <input type="password" id="confirmPassword" placeholder="Confirm your password">
+                    </div>
+                </div>
+
+                <div class="form-group" id="countryGroup" style="display: none;">
+                    <label>Country (Optional)</label>
+                    <select id="country" class="country-select">
+                        <option value="">Select your country</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary auth-btn" id="submitBtn">
+                    <i class="fas fa-rocket"></i> Sign Up Free
+                </button>
+            </form>
+
+            <button class="guest-btn" onclick="guestLogin()">
+                <i class="fas fa-user-friends"></i> Continue as Guest
+            </button>
+
+            <div class="auth-footer">
+                <span id="toggleText">Already have an account?</span>
+                <a id="toggleLink">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoginMode = false;
+
+        // Load countries
+        async function loadCountries() {
+            try {
+                const response = await fetch('/api/countries');
+                const countries = await response.json();
+                const select = document.getElementById('country');
+                countries.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.code;
+                    option.textContent = `${country.flag} ${country.name}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading countries:', error);
+            }
+        }
+
+        // Check URL params for signup mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('signup') === 'true') {
+            isLoginMode = false;
+            updateForm();
+        } else if (urlParams.get('login') === 'true') {
+            isLoginMode = true;
+            updateForm();
+        }
+
+        function updateForm() {
+            const formTitle = document.getElementById('formTitle');
+            const formSubtitle = document.getElementById('formSubtitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const confirmGroup = document.getElementById('confirmGroup');
+            const countryGroup = document.getElementById('countryGroup');
+            const toggleText = document.getElementById('toggleText');
+            const toggleLink = document.getElementById('toggleLink');
+
+            if (isLoginMode) {
+                formTitle.textContent = 'Login';
+                formSubtitle.textContent = 'Welcome back to CyberCall';
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+                confirmGroup.style.display = 'none';
+                countryGroup.style.display = 'none';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign Up';
+            } else {
+                formTitle.textContent = 'Sign Up';
+                formSubtitle.textContent = 'Join CyberCall for free global calling';
+                submitBtn.innerHTML = '<i class="fas fa-rocket"></i> Sign Up Free';
+                confirmGroup.style.display = 'block';
+                countryGroup.style.display = 'block';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Login';
+            }
+        }
+
+        function toggleMode() {
+            isLoginMode = !isLoginMode;
+            updateForm();
+            clearMessages();
+        }
+
+        function clearMessages() {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = '';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${message}</div>`;
+        }
+
+        function showSuccess(message) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="success-message"><i class="fas fa-check-circle"></i> ${message}</div>`;
+        }
+
+        document.getElementById('toggleLink').addEventListener('click', toggleMode);
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearMessages();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showError('Please fill in all required fields');
+                return;
+            }
+
+            if (!isLoginMode) {
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                if (password !== confirmPassword) {
+                    showError('Passwords do not match');
+                    return;
+                }
+                if (password.length < 4) {
+                    showError('Password must be at least 4 characters');
+                    return;
+                }
+
+                // Signup
+                const country = document.getElementById('country').value;
+                try {
+                    const response = await fetch('/api/signup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password, country })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showSuccess('Account created successfully! Redirecting...');
+                        localStorage.setItem('authToken', 'guest-token');
+                        localStorage.setItem('userData', JSON.stringify({
+                            userId: data.userId,
+                            username: data.username,
+                            country: country
+                        }));
+                        setTimeout(() => {
+                            window.location.href = '/users.html';
+                        }, 1500);
+                    } else {
+                        showError(data.error || 'Signup failed');
+                    }
+                } catch (error) {
+                    showError('Network error. Please try again.');
+                }
+            } else {
+                // Login
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showSuccess('Login successful! Redirecting...');
+                        localStorage.setItem('authToken', 'user-token');
+                        localStorage.setItem('userData', JSON.stringify({
+                            userId: data.userId,
+                            username: data.username,
+                            country: data.country
+                        }));
+                        setTimeout(() => {
+                            window.location.href = '/users.html';
+                        }, 1000);
+                    } else {
+                        showError(data.error || 'Login failed');
+                    }
+                } catch (error) {
+                    showError('Network error. Please try again.');
+                }
+            }
+        });
+
+        function guestLogin() {
+            const guestId = 'guest_' + Date.now();
+            const guestName = 'Guest_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('authToken', 'guest-token');
+            localStorage.setItem('userData', JSON.stringify({
+                userId: guestId,
+                username: guestName,
+                country: 'Unknown',
+                isGuest: true
+            }));
+            window.location.href = '/users.html';
+        }
+
+        loadCountries();
+    </script>
+</body>
+</html>
