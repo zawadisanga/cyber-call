@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCall | My Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .profile-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-blue), #0099cc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 0 auto 1rem;
+        }
+
+        .profile-name {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-country {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            color: var(--neon-blue);
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .edit-form {
+            margin-top: 2rem;
+            text-align: left;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .avatar-options {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .avatar-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-blue), #0099cc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .avatar-option:hover {
+            transform: scale(1.1);
+        }
+
+        .save-btn {
+            width: 100%;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar glass">
+        <div class="logo" onclick="location.href='/users.html'">
+            <i class="fas fa-shield-alt"></i>
+            <span>CyberCall</span>
+        </div>
+        <div class="nav-icon" onclick="location.href='/users.html'">
+            <i class="fas fa-arrow-left"></i> Back
+        </div>
+    </nav>
+
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-avatar" id="profileAvatar">
+                U
+            </div>
+            <h1 class="profile-name" id="profileName">Username</h1>
+            <div class="profile-country" id="profileCountry">
+                <i class="fas fa-map-marker-alt"></i> <span>Unknown</span>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat">
+                    <div class="stat-value" id="callCount">0</div>
+                    <div class="stat-label">Total Calls</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="totalDuration">0</div>
+                    <div class="stat-label">Hours Spent</div>
+                </div>
+            </div>
+
+            <div class="edit-form">
+                <h3><i class="fas fa-edit"></i> Edit Profile</h3>
+                
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="displayName" class="input-neon" placeholder="Your name">
+                </div>
+                
+                <div class="form-group">
+                    <label>Country</label>
+                    <select id="userCountry" class="country-select">
+                        <option value="">Select your country</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Avatar Color</label>
+                    <div class="avatar-options">
+                        <div class="avatar-option" style="background: linear-gradient(135deg, #00f3ff, #0099cc)" onclick="changeAvatarColor('gradient1')"></div>
+                        <div class="avatar-option" style="background: linear-gradient(135deg, #ff00f3, #cc0099)" onclick="changeAvatarColor('gradient2')"></div>
+                        <div class="avatar-option" style="background: linear-gradient(135deg, #00ff88, #009966)" onclick="changeAvatarColor('gradient3')"></div>
+                        <div class="avatar-option" style="background: linear-gradient(135deg, #ffaa00, #cc8800)" onclick="changeAvatarColor('gradient4')"></div>
+                    </div>
+                </div>
+                
+                <button class="btn-primary save-btn" onclick="saveProfile()">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser;
+        let callStats = { count: 0, totalDuration: 0 };
+
+        // Load user data
+        const userData = localStorage.getItem('userData');
+        if (!userData) {
+            window.location.href = '/auth.html';
+        }
+        currentUser = JSON.parse(userData);
+
+        // Load countries
+        async function loadCountries() {
+            try {
+                const response = await fetch('/api/countries');
+                const countries = await response.json();
+                const select = document.getElementById('userCountry');
+                countries.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.code;
+                    option.textContent = `${country.flag} ${country.name}`;
+                    if (country.code === currentUser.country) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading countries:', error);
+            }
+        }
+
+        // Load profile data
+        function loadProfile() {
+            document.getElementById('profileName').textContent = currentUser.username;
+            document.getElementById('displayName').value = currentUser.username;
+            
+            const countrySpan = document.querySelector('#profileCountry span');
+            countrySpan.textContent = currentUser.country || 'Unknown';
+            
+            const avatar = localStorage.getItem('userAvatar');
+            if (avatar) {
+                document.getElementById('profileAvatar').style.background = avatar;
+            }
+            
+            updateAvatarLetter();
+            
+            // Load call stats
+            const history = JSON.parse(localStorage.getItem('callHistory') || '[]');
+            callStats.count = history.length;
+            callStats.totalDuration = history.reduce((sum, call) => sum + (call.duration || 0), 0);
+            
+            document.getElementById('callCount').textContent = callStats.count;
+            document.getElementById('totalDuration').textContent = Math.floor(callStats.totalDuration / 3600);
+        }
+
+        function updateAvatarLetter() {
+            const letter = currentUser.username.charAt(0).toUpperCase();
+            document.getElementById('profileAvatar').innerHTML = letter;
+        }
+
+        function changeAvatarColor(gradient) {
+            const gradients = {
+                gradient1: 'linear-gradient(135deg, #00f3ff, #0099cc)',
+                gradient2: 'linear-gradient(135deg, #ff00f3, #cc0099)',
+                gradient3: 'linear-gradient(135deg, #00ff88, #009966)',
+                gradient4: 'linear-gradient(135deg, #ffaa00, #cc8800)'
+            };
+            
+            const avatar = document.getElementById('profileAvatar');
+            avatar.style.background = gradients[gradient];
+            localStorage.setItem('userAvatar', gradients[gradient]);
+        }
+
+        function saveProfile() {
+            const newName = document.getElementById('displayName').value.trim();
+            const newCountry = document.getElementById('userCountry').value;
+            
+            if (newName) {
+                currentUser.username = newName;
+                document.getElementById('profileName').textContent = newName;
+                updateAvatarLetter();
+            }
+            
+            if (newCountry) {
+                currentUser.country = newCountry;
+                const countrySpan = document.querySelector('#profileCountry span');
+                const selectedOption = document.getElementById('userCountry').selectedOptions[0];
+                countrySpan.textContent = selectedOption ? selectedOption.textContent : newCountry;
+            }
+            
+            // Save updated user data
+            localStorage.setItem('userData', JSON.stringify(currentUser));
+            
+            // Show success message
+            const saveBtn = document.querySelector('.save-btn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+            setTimeout(() => {
+                saveBtn.innerHTML = originalText;
+            }, 2000);
+        }
+
+        loadCountries();
+        loadProfile();
+    </script>
+
+    <style>
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            cursor: pointer;
+        }
+        
+        .nav-icon {
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background: rgba(0, 243, 255, 0.1);
+        }
+        
+        .nav-icon:hover {
+            background: rgba(0, 243, 255, 0.2);
+        }
+        
+        .country-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+        }
+    </style>
+</body>
+</html>
