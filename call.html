@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CyberCall | Call in Progress</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .call-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--darker-bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .remote-video-container {
+            flex: 1;
+            background: #000;
+            position: relative;
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .local-video-container {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 120px;
+            height: 160px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--neon-blue);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        #localVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .call-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .caller-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .call-duration {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .call-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 25px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .call-control {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .call-control:hover {
+            transform: scale(1.1);
+        }
+
+        .call-control.end-call {
+            background: var(--error-red);
+        }
+
+        .call-control.active {
+            background: var(--neon-blue);
+            color: var(--dark-bg);
+        }
+
+        @media (max-width: 768px) {
+            .local-video-container {
+                width: 80px;
+                height: 106px;
+                bottom: 80px;
+            }
+            .call-control {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="call-container">
+        <div class="remote-video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <div class="local-video-container" onclick="toggleCameraPosition()">
+            <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        
+        <div class="call-info">
+            <div class="caller-name" id="callerName">Connecting...</div>
+            <div class="call-duration" id="callDuration">00:00</div>
+        </div>
+
+        <div class="call-controls">
+            <button class="call-control" id="muteBtn" onclick="toggleMute()">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="call-control" id="videoBtn" onclick="toggleVideo()">
+                <i class="fas fa-video"></i>
+            </button>
+            <button class="call-control end-call" onclick="endCall()">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/webrtc.js"></script>
+    <script>
+        let socket;
+        let webrtc;
+        let currentUser;
+        let callTarget;
+        let isCaller = false;
+        let callStartTime;
+        let durationInterval;
+
+        // Load data
+        const userData = localStorage.getItem('userData');
+        const targetData = localStorage.getItem('callTarget');
+        
+        if (!userData) {
+            window.location.href = '/auth.html';
+        }
+        
+        currentUser = JSON.parse(userData);
+        
+        if (targetData) {
+            callTarget = JSON.parse(targetData);
+            isCaller = true;
+            document.getElementById('callerName').textContent = `Calling ${callTarget.username}...`;
+        } else {
+            document.getElementById('callerName').textContent = `Incoming call...`;
+        }
+
+        // Initialize WebRTC
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        
+        webrtc = new WebRTCHandler(null, localVideo, remoteVideo);
+        
+        webrtc.setCallbacks({
+            onCallConnected: () => {
+                console.log('Call connected');
+                startCallTimer();
+            },
+            onCallEnded: (duration) => {
+                saveCallHistory(duration);
+                setTimeout(() => {
+                    window.location.href = '/users.html';
+                }, 500);
+            }
+        });
+
+        // Connect socket
+        socket = io();
+        
+        socket.on('connect', () => {
+            socket.emit('user-online', {
+                userId: currentUser.userId,
+                username: currentUser.username,
+                country: currentUser.country
+            });
+            
+            if (isCaller) {
+                makeCall();
+            }
+        });
+
+        socket.on('incoming-call', async (data) => {
+            if (!isCaller) {
+                document.getElementById('callerName').textContent = `Incoming call from ${data.callerName}`;
+                const accepted = await webrtc.handleIncomingCall(data.callerId, data.callerName, data.signal);
+                if (accepted) {
+                    isCaller = false;
+                    callTarget = { userId: data.callerId, username: data.callerName };
+                    startCallTimer();
+                }
+            }
+        });
+
+        socket.on('call-answered', async (data) => {
+            await webrtc.peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+        });
+
+        socket.on('call-rejected', () => {
+            alert('Call rejected');
+            window.location.href = '/users.html';
+        });
+
+        socket.on('call-ended', () => {
+            alert('Call ended');
+            window.location.href = '/users.html';
+        });
+
+        async function makeCall() {
+            const success = await webrtc.startCall(callTarget.userId, currentUser.userId, currentUser.username);
+            if (!success) {
+                alert('Unable to start call');
+                window.location.href = '/users.html';
+            }
+        }
+
+        function toggleMute() {
+            const isMuted = webrtc.toggleMute();
+            const btn = document.getElementById('muteBtn');
+            if (isMuted) {
+                btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                btn.classList.add('active');
+            } else {
+                btn.innerHTML = '<i class="fas fa-microphone"></i>';
+                btn.classList.remove('active');
+            }
+        }
+
+        function toggleVideo() {
+            const isOff = webrtc.toggleVideo();
+            const btn = document.getElementById('videoBtn');
+            if (isOff) {
+                btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+                btn.classList.add('active');
+            } else {
+                btn.innerHTML = '<i class="fas fa-video"></i>';
+                btn.classList.remove('active');
+            }
+        }
+
+        function endCall() {
+            webrtc.endCall();
+        }
+
+        function startCallTimer() {
+            callStartTime = Date.now();
+            durationInterval = setInterval(() => {
+                const duration = Math.floor((Date.now() - callStartTime) / 1000);
+                const mins = Math.floor(duration / 60);
+                const secs = duration % 60;
+                document.getElementById('callDuration').textContent = 
+                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function saveCallHistory(duration) {
+            const history = {
+                with: callTarget?.username || 'Unknown',
+                duration: duration,
+                timestamp: new Date().toISOString(),
+                type: isCaller ? 'outgoing' : 'incoming'
+            };
+            
+            const existing = localStorage.getItem('callHistory');
+            let calls = existing ? JSON.parse(existing) : [];
+            calls.unshift(history);
+            calls = calls.slice(0, 50);
+            localStorage.setItem('callHistory', JSON.stringify(calls));
+        }
+
+        function toggleCameraPosition() {
+            const container = document.querySelector('.local-video-container');
+            if (container.style.bottom === '100px') {
+                container.style.bottom = 'auto';
+                container.style.top = '20px';
+                container.style.right = '20px';
+            } else {
+                container.style.bottom = '100px';
+                container.style.top = 'auto';
+                container.style.right = '20px';
+            }
+        }
+    </script>
+</body>
+</html>
