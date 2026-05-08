@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCall | Privacy Settings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .privacy-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .setting-group {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info h3 {
+            margin-bottom: 0.25rem;
+        }
+
+        .setting-info p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--neon-blue);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .blocked-users-list {
+            margin-top: 1rem;
+        }
+
+        .blocked-user {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(0, 243, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+
+        .unblock-btn {
+            background: none;
+            border: none;
+            color: var(--error-red);
+            cursor: pointer;
+        }
+
+        .call-history {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .call-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar glass">
+        <div class="logo" onclick="location.href='/users.html'">
+            <i class="fas fa-shield-alt"></i>
+            <span>CyberCall</span>
+        </div>
+        <div class="nav-icon" onclick="location.href='/users.html'">
+            <i class="fas fa-arrow-left"></i> Back
+        </div>
+    </nav>
+
+    <div class="privacy-container">
+        <h2><i class="fas fa-shield-alt"></i> Privacy & Security</h2>
+        
+        <div class="setting-group">
+            <h3><i class="fas fa-user-secret"></i> Privacy Settings</h3>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Incognito Mode</h3>
+                    <p>Hide your online status from other users</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="incognitoMode">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Block Strangers</h3>
+                    <p>Only receive calls from people you've chatted with</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="blockStrangers">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Screen Blur During Calls</h3>
+                    <p>Automatically blur your screen when in a call</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="screenBlur">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h3>Call Sounds</h3>
+                    <p>Enable ringtone and call sounds</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="soundEnabled" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <h3><i class="fas fa-ban"></i> Blocked Users</h3>
+            <div id="blockedUsersList" class="blocked-users-list">
+                <p>No blocked users</p>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <h3><i class="fas fa-history"></i> Call History</h3>
+            <div id="callHistory" class="call-history">
+                <p>No call history</p>
+            </div>
+            <button class="btn-secondary" onclick="clearCallHistory()" style="margin-top: 1rem;">
+                <i class="fas fa-trash"></i> Clear History
+            </button>
+        </div>
+
+        <div class="setting-group">
+            <h3><i class="fas fa-database"></i> Data Management</h3>
+            <button class="btn-secondary" onclick="exportData()">
+                <i class="fas fa-download"></i> Export My Data
+            </button>
+            <button class="btn-danger" onclick="deleteAccount()" style="margin-left: 1rem;">
+                <i class="fas fa-exclamation-triangle"></i> Delete Account
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Load settings
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('cybercall_settings') || '{}');
+            document.getElementById('incognitoMode').checked = settings.incognitoMode || false;
+            document.getElementById('blockStrangers').checked = settings.blockStrangers || false;
+            document.getElementById('screenBlur').checked = settings.screenBlur || false;
+            document.getElementById('soundEnabled').checked = settings.soundEnabled !== false;
+        }
+
+        // Save settings
+        function saveSettings() {
+            const settings = {
+                incognitoMode: document.getElementById('incognitoMode').checked,
+                blockStrangers: document.getElementById('blockStrangers').checked,
+                screenBlur: document.getElementById('screenBlur').checked,
+                soundEnabled: document.getElementById('soundEnabled').checked
+            };
+            localStorage.setItem('cybercall_settings', JSON.stringify(settings));
+        }
+
+        // Load blocked users
+        function loadBlockedUsers() {
+            const blocked = JSON.parse(localStorage.getItem('cybercall_blocked') || '[]');
+            const container = document.getElementById('blockedUsersList');
+            
+            if (blocked.length === 0) {
+                container.innerHTML = '<p>No blocked users</p>';
+                return;
+            }
+            
+            container.innerHTML = blocked.map(user => `
+                <div class="blocked-user">
+                    <span><i class="fas fa-user"></i> ${user}</span>
+                    <button class="unblock-btn" onclick="unblockUser('${user}')">
+                        <i class="fas fa-user-check"></i> Unblock
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Load call history
+        function loadCallHistory() {
+            const history = JSON.parse(localStorage.getItem('callHistory') || '[]');
+            const container = document.getElementById('callHistory');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<p>No call history</p>';
+                return;
+            }
+            
+            container.innerHTML = history.map(call => `
+                <div class="call-entry">
+                    <div>
+                        <i class="fas fa-${call.type === 'outgoing' ? 'call-made' : 'call-received'}"></i>
+                        <strong>${call.with}</strong>
+                        <div class="call-time">${new Date(call.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div>${formatDuration(call.duration)}</div>
+                </div>
+            `).join('');
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function unblockUser(username) {
+            let blocked = JSON.parse(localStorage.getItem('cybercall_blocked') || '[]');
+            blocked = blocked.filter(u => u !== username);
+            localStorage.setItem('cybercall_blocked', JSON.stringify(blocked));
+            loadBlockedUsers();
+        }
+
+        function clearCallHistory() {
+            if (confirm('Clear all call history?')) {
+                localStorage.removeItem('callHistory');
+                loadCallHistory();
+            }
+        }
+
+        function exportData() {
+            const data = {
+                settings: JSON.parse(localStorage.getItem('cybercall_settings') || '{}'),
+                callHistory: JSON.parse(localStorage.getItem('callHistory') || '[]'),
+                blockedUsers: JSON.parse(localStorage.getItem('cybercall_blocked') || '[]'),
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cybercall-data-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function deleteAccount() {
+            if (confirm('WARNING: This will permanently delete all your data. Are you sure?')) {
+                if (confirm('Type "DELETE" to confirm')) {
+                    localStorage.clear();
+                    alert('Account deleted. Redirecting to home...');
+                    window.location.href = '/';
+                }
+            }
+        }
+
+        // Event listeners
+        document.getElementById('incognitoMode').addEventListener('change', saveSettings);
+        document.getElementById('blockStrangers').addEventListener('change', saveSettings);
+        document.getElementById('screenBlur').addEventListener('change', saveSettings);
+        document.getElementById('soundEnabled').addEventListener('change', saveSettings);
+
+        // Initialize
+        loadSettings();
+        loadBlockedUsers();
+        loadCallHistory();
+    </script>
+
+    <style>
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            cursor: pointer;
+        }
+        
+        .nav-icon {
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background: rgba(0, 243, 255, 0.1);
+        }
+        
+        .nav-icon:hover {
+            background: rgba(0, 243, 255, 0.2);
+        }
+    </style>
+</body>
+</html>
