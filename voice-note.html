@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCall | Voice Note</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .recorder-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .recorder-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--error-red);
+            border: none;
+            color: white;
+            font-size: 3rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 2rem 0;
+        }
+
+        .record-btn.recording {
+            animation: pulse 1s infinite;
+            background: var(--warning-yellow);
+        }
+
+        .timer {
+            font-size: 2rem;
+            font-family: monospace;
+            margin: 1rem 0;
+        }
+
+        .waveform {
+            height: 100px;
+            background: rgba(0, 243, 255, 0.1);
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        .waveform-bar {
+            width: 3px;
+            background: var(--neon-blue);
+            transition: height 0.1s;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="recorder-container">
+        <div class="recorder-card">
+            <h2><i class="fas fa-microphone-alt"></i> Voice Note</h2>
+            <p>Record and send voice message</p>
+
+            <div class="waveform" id="waveform"></div>
+            <div class="timer" id="timer">00:00</div>
+
+            <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+                <i class="fas fa-microphone"></i>
+            </button>
+
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button class="btn-secondary" onclick="cancelRecording()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-primary" onclick="sendVoiceNote()">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let startTime;
+        let timerInterval;
+        let audioContext;
+        let source;
+        let analyser;
+        let animationId;
+
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    document.getElementById('actionButtons').style.display = 'flex';
+                    stopVisualizer();
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                const recordBtn = document.getElementById('recordBtn');
+                recordBtn.classList.add('recording');
+                recordBtn.innerHTML = '<i class="fas fa-stop"></i>';
+                
+                startTimer();
+                startVisualizer(stream);
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Unable to access microphone');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                const recordBtn = document.getElementById('recordBtn');
+                recordBtn.classList.remove('recording');
+                recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                
+                stopTimer();
+            }
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                document.getElementById('timer').textContent = 
+                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                
+                if (elapsed >= 60) {
+                    stopRecording();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        }
+
+        function cancelRecording() {
+            audioChunks = [];
+            window.location.href = '/chat.html';
+        }
+
+        function sendVoiceNote() {
+            if (audioChunks.length === 0) return;
+            
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            
+            reader.onloadend = () => {
+                // Store voice note and go back
+                localStorage.setItem('tempVoiceNote', reader.result);
+                window.location.href = '/chat.html';
+            };
+            
+            reader.readAsDataURL(audioBlob);
+        }
+
+        function startVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 32;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const waveform = document.getElementById('waveform');
+            
+            function createBars() {
+                waveform.innerHTML = '';
+                for (let i = 0; i < 32; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'waveform-bar';
+                    bar.style.height = '3px';
+                    waveform.appendChild(bar);
+                }
+            }
+            createBars();
+            
+            function animate() {
+                if (!isRecording) return;
+                
+                analyser.getByteFrequencyData(dataArray);
+                const bars = waveform.children;
+                
+                for (let i = 0; i < bars.length; i++) {
+                    const value = dataArray[i] || 0;
+                    const height = Math.max(3, value / 3);
+                    bars[i].style.height = `${height}px`;
+                }
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        function stopVisualizer() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        }
+    </script>
+</body>
+</html>
