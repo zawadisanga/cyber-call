@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberCall | Global Users</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/neon-blue.css">
+    <style>
+        .users-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .search-bar {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 15px 20px 15px 50px;
+            font-size: 1.1rem;
+        }
+
+        .search-bar i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+        }
+
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-blue), #0099cc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-country {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--neon-blue);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+            background: var(--neon-blue);
+            color: var(--dark-bg);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-icons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-icon:hover {
+            background: rgba(0, 243, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-shield-alt"></i>
+            <span>CyberCall</span>
+        </div>
+        <div class="nav-icons">
+            <div class="nav-icon" onclick="location.href='/profile.html'">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="nav-icon" onclick="location.href='/privacy.html'">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="nav-icon" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div class="users-container">
+        <div class="search-bar">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search by username or country..." class="input-neon">
+        </div>
+
+        <div class="users-grid" id="usersGrid">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading global users...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket;
+        let currentUser;
+        let allUsers = [];
+
+        // Load user data
+        const userData = localStorage.getItem('userData');
+        if (!userData) {
+            window.location.href = '/auth.html';
+        }
+        currentUser = JSON.parse(userData);
+
+        // Connect socket
+        socket = io();
+        
+        socket.on('connect', () => {
+            socket.emit('user-online', {
+                userId: currentUser.userId,
+                username: currentUser.username,
+                country: currentUser.country
+            });
+            loadUsers();
+        });
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                // Filter out current user
+                allUsers = users.filter(u => u.userId !== currentUser.userId);
+                displayUsers(allUsers);
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function displayUsers(users) {
+            const grid = document.getElementById('usersGrid');
+            if (users.length === 0) {
+                grid.innerHTML = '<div class="no-results"><i class="fas fa-users-slash"></i><p>No users found</p></div>';
+                return;
+            }
+
+            grid.innerHTML = users.map(user => `
+                <div class="user-card glass">
+                    <div class="user-avatar">
+                        ${user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">
+                            ${user.username}
+                            ${user.online ? '<span class="online-indicator"></span>' : ''}
+                        </div>
+                        <div class="user-country">
+                            <i class="fas fa-map-marker-alt"></i> ${user.country || 'Unknown'}
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="action-btn" onclick="startChat('${user.userId}', '${user.username}')" title="Message">
+                            <i class="fas fa-comment"></i>
+                        </button>
+                        <button class="action-btn" onclick="startCall('${user.userId}', '${user.username}')" title="Call">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allUsers.filter(user => 
+                user.username.toLowerCase().includes(query) ||
+                (user.country && user.country.toLowerCase().includes(query))
+            );
+            displayUsers(filtered);
+        });
+
+        function startChat(userId, username) {
+            localStorage.setItem('chatPartner', JSON.stringify({ userId, username }));
+            window.location.href = '/chat.html';
+        }
+
+        function startCall(userId, username) {
+            localStorage.setItem('callTarget', JSON.stringify({ userId, username }));
+            window.location.href = '/call.html';
+        }
+
+        function logout() {
+            if (socket) {
+                socket.disconnect();
+            }
+            localStorage.clear();
+            window.location.href = '/';
+        }
+
+        socket.on('update-users', (users) => {
+            allUsers = users;
+            displayUsers(allUsers);
+        });
+
+        socket.on('user-offline', (data) => {
+            const userIndex = allUsers.findIndex(u => u.userId === data.userId);
+            if (userIndex !== -1) {
+                allUsers[userIndex].online = false;
+                displayUsers(allUsers);
+            }
+        });
+    </script>
+</body>
+</html>
